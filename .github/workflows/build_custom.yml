@@ -39,6 +39,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext zlib1g-dev swig unzip time rsync
 
+      - name: Update and install feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
       - name: Build target
         id: build
         run: |
