@@ -821,6 +821,18 @@ define Device/cudy_wr1300-v3
 endef
 TARGET_DEVICES += cudy_wr1300-v3
 
+define Device/cudy_wr1300-v4
+  $(Device/dsa-migration)
+  IMAGE_SIZE := 15872k
+  DEVICE_VENDOR := Cudy
+  DEVICE_MODEL := WR1300
+  DEVICE_VARIANT := v4
+  DEVICE_PACKAGES := kmod-mt7603 kmod-mt7615e kmod-mt7663-firmware-ap \
+	-uboot-envtools
+  SUPPORTED_DEVICES += cudy,wr1300-v4 R98
+endef
+TARGET_DEVICES += cudy_wr1300-v4
+
 define Device/cudy_wr2100
   $(Device/dsa-migration)
   DEVICE_VENDOR := Cudy
@@ -1752,6 +1764,15 @@ define Device/iodata_wn-ax2033gr
   DEVICE_PACKAGES := kmod-mt7603 kmod-mt7615-firmware -uboot-envtools
 endef
 TARGET_DEVICES += iodata_wn-ax2033gr
+
+define Device/iodata_wn-ax2033gr2
+  $(Device/iodata_nand)
+  DEVICE_MODEL := WN-AX2033GR2
+  KERNEL_INITRAMFS := $(KERNEL_DTB) | loader-kernel | lzma | \
+	uImage lzma -M 0x434f4d42 -n '3.10(XBH.0)b50' | iodata-mstc-header
+  DEVICE_PACKAGES := kmod-mt7603 kmod-mt7615-firmware -uboot-envtools
+endef
+TARGET_DEVICES += iodata_wn-ax2033gr2
 
 define Device/iodata_wn-deax1800gr
   $(Device/dsa-migration)
@@ -3278,6 +3299,16 @@ define Device/unielec_u7621-06-64m
 endef
 TARGET_DEVICES += unielec_u7621-06-64m
 
+define Device/wavlink_halo-base-pro
+  $(Device/dsa-migration)
+  IMAGE_SIZE := 15552k
+  DEVICE_VENDOR := Wavlink
+  DEVICE_MODEL := Halo Base Pro
+  KERNEL := kernel-bin | append-dtb | lzma | uImage lzma | pad-to 64k
+  DEVICE_PACKAGES := kmod-mt7603 kmod-mt7615-firmware kmod-mt7663-firmware-ap
+endef
+TARGET_DEVICES += wavlink_halo-base-pro
+
 define Device/wavlink_wl-wn531a6
   $(Device/dsa-migration)
   DEVICE_VENDOR := Wavlink
@@ -3621,6 +3652,19 @@ define Device/z-router_zr-2660
   DEVICE_PACKAGES += kmod-mt7915-firmware kmod-usb3 -uboot-envtools
 endef
 TARGET_DEVICES += z-router_zr-2660
+
+define Device/z-router_zr-2662
+  $(Device/dsa-migration)
+  $(Device/nand)
+  DEVICE_VENDOR := Z-ROUTER
+  DEVICE_MODEL := ZR-2662
+  IMAGE_SIZE := 121344k
+  KERNEL_LOADADDR := 0x82000000
+  KERNEL := kernel-bin | relocate-kernel $(loadaddr-y) | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  DEVICE_PACKAGES += kmod-mt7915-firmware kmod-usb3 -uboot-envtools
+endef
+TARGET_DEVICES += z-router_zr-2662
 
 define Device/zbtlink_zbt-we1326
   $(Device/dsa-migration)
