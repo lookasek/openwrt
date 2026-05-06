@@ -1,0 +1,111 @@
+name: Build custom OpenWrt firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "OpenWrt target"
+        required: true
+        type: string
+      subtarget:
+        description: "OpenWrt subtarget"
+        required: true
+        type: string
+      profile:
+        description: "Device profile"
+        required: true
+        type: string
+      openwrt_ref:
+        description: "Branch/tag OpenWrt"
+        required: false
+        default: "main"
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.openwrt_ref }}
+          fetch-depth: 0
+
+      - name: Setup build environment
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext zlib1g-dev swig unzip time rsync
+
+      - name: Build target
+        id: build
+        run: |
+          make defconfig
+          echo "CONFIG_DEVEL=y" > .config
+          echo "CONFIG_BPF_TOOLCHAIN_HOST=y" >> .config
+          echo "CONFIG_TARGET_${{ inputs.target }}=y" >> .config
+          echo "CONFIG_TARGET_${{ inputs.target }}_${{ inputs.subtarget }}=y" >> .config
+          echo "CONFIG_TARGET_${{ inputs.target }}_${{ inputs.subtarget }}_DEVICE_${{ inputs.profile }}=y" >> .config
+          
+          echo "CONFIG_PACKAGE_apk_mbedtls=y" >> .config
+          echo "CONFIG_PACKAGE_base_files=y" >> .config
+          echo "CONFIG_PACKAGE_ca_bundle=y" >> .config
+          echo "CONFIG_PACKAGE_dnsmasq=y" >> .config
+          echo "CONFIG_PACKAGE_dropbear=y" >> .config
+          echo "CONFIG_PACKAGE_firewall4=y" >> .config
+          echo "CONFIG_PACKAGE_fstools=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_crypto_hw_eip93=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_gpio_button_hotplug=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_leds_gpio=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_nft_offload=y" >> .config
+          echo "CONFIG_PACKAGE_libc=y" >> .config
+          echo "CONFIG_PACKAGE_libgcc=y" >> .config
+          echo "CONFIG_PACKAGE_libustream_mbedtls=y" >> .config
+          echo "CONFIG_PACKAGE_logd=y" >> .config
+          echo "CONFIG_PACKAGE_mtd=y" >> .config
+          echo "CONFIG_PACKAGE_netifd=y" >> .config
+          echo "CONFIG_PACKAGE_nftables=y" >> .config
+          echo "CONFIG_PACKAGE_odhcp6c=y" >> .config
+          echo "CONFIG_PACKAGE_odhcpd_ipv6only=y" >> .config
+          echo "CONFIG_PACKAGE_ppp=y" >> .config
+          echo "CONFIG_PACKAGE_ppp_mod_pppoe=y" >> .config
+          echo "CONFIG_PACKAGE_procd_ujail=y" >> .config
+          echo "CONFIG_PACKAGE_uboot_envtools=y" >> .config
+          echo "CONFIG_PACKAGE_uci=y" >> .config
+          echo "CONFIG_PACKAGE_uclient_fetch=y" >> .config
+          echo "CONFIG_PACKAGE_urandom_seed=y" >> .config
+          echo "CONFIG_PACKAGE_urngd=y" >> .config
+          echo "CONFIG_PACKAGE_wpad_basic_mbedtls=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_mt7603=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_mt7615e=y" >> .config
+          echo "CONFIG_PACKAGE_kmod_mt7663_firmware_ap_uboot_envtools=y" >> .config
+          echo "CONFIG_PACKAGE_luci=y" >> .config
+          echo "CONFIG_PACKAGE_luci_app_attendedsysupgrade=y" >> .config
+          echo "CONFIG_PACKAGE_relayd=y" >> .config
+          make defconfig
+          make -j$(nproc) BUILD_LOG=1
+
+          echo "build_success=true" >> $GITHUB_OUTPUT
+
+      - name: Upload log
+        uses: actions/upload-artifact@v7
+        if: (success() || failure())
+        with:
+          name: build-log-${{ inputs.target }}-${{ inputs.subtarget }}-${{ inputs.profile }}
+          path: logs/
+
+      - name: Create artifact archive
+        if: steps.build.outputs.build_success == 'true'
+        run: |
+          cd bin/
+          tar -czf ../build-artifacts.tar.gz *
+          cd ..
+
+      - name: Upload build artifacts
+        if: steps.build.outputs.build_success == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ inputs.target }}-${{ inputs.subtarget }}-${{ inputs.profile }}
+          path: build-artifacts.tar.gz
